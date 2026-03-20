@@ -1,0 +1,223 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nishika | National Flower Day 2026</title>
+    <style>
+        :root {
+            --hot-pink: #ff0055;
+            --soft-pink: #ff85a2;
+            --gold: #ffb700;
+            --bg: #050505;
+        }
+
+        body, html {
+            margin: 0; padding: 0;
+            height: 100vh; width: 100vw;
+            overflow: hidden;
+            background: #050505;
+            font-family: 'Inter', sans-serif;
+            display: flex; justify-content: center; align-items: center;
+            touch-action: none;
+        }
+
+        /* 1. Background Typography */
+        .name-layer {
+            position: fixed;
+            font-size: 18vw;
+            font-weight: 900;
+            text-transform: uppercase;
+            color: rgba(255, 0, 85, 0.05);
+            letter-spacing: 2vw;
+            z-index: 0;
+            pointer-events: none;
+            text-shadow: 0 0 30px rgba(255, 0, 85, 0.1);
+        }
+
+        /* 2. The Main Card */
+        .card {
+            position: relative;
+            z-index: 1000;
+            background: rgba(255, 255, 255, 0.08);
+            backdrop-filter: blur(25px);
+            padding: 40px;
+            border-radius: 35px;
+            text-align: center;
+            box-shadow: 0 0 50px rgba(0,0,0,0.8);
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            max-width: 420px;
+            width: 80%;
+            transition: all 0.8s ease;
+            opacity: 0;
+            transform: scale(0.9);
+            pointer-events: none;
+        }
+
+        .card.active { opacity: 1; transform: scale(1); pointer-events: auto; }
+        .card.minimized { opacity: 0.1; transform: scale(0.5) translateY(200px); pointer-events: none; }
+
+        h1 { color: white; font-size: 2rem; margin: 0; letter-spacing: 2px; }
+        p { color: #ddd; line-height: 1.6; font-size: 1rem; margin-top: 15px; }
+
+        /* 3. Controls */
+        .btn-start {
+            position: absolute;
+            z-index: 1001;
+            padding: 20px 50px;
+            background: var(--hot-pink);
+            color: white;
+            border: none;
+            border-radius: 50px;
+            cursor: pointer;
+            font-weight: 900;
+            box-shadow: 0 0 30px var(--hot-pink);
+            text-transform: uppercase;
+        }
+
+        .toggle-ui {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            z-index: 2001;
+            background: rgba(255,255,255,0.1);
+            color: white;
+            border: 1px solid rgba(255,255,255,0.2);
+            padding: 10px 15px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-size: 0.7rem;
+            display: none;
+        }
+
+        /* 4. The Garden Canvas */
+        #renderCanvas { position: fixed; top: 0; left: 0; width: 100%; height: 100%; z-index: 10; }
+
+        .hidden { display: none !important; }
+    </style>
+</head>
+<body>
+
+    <div class="name-layer">NISHIKA</div>
+
+    <button class="btn-start" id="startBtn" onclick="initGarden()">Start The Experience</button>
+
+    <div class="card" id="mainCard">
+        <h1>NISHIKA</h1>
+        <p>
+            Happy National Flower Day 2026. <br>
+            You are the most beautiful bloom in this infinite garden. 
+        </p>
+        <div style="color: var(--soft-pink); font-size: 0.8rem; margin-top: 15px; letter-spacing: 1px;">
+            TOUCH & HOLD TO GATHER FLOWERS<br>
+            DOUBLE-TAP TO BURST
+        </div>
+    </div>
+
+    <canvas id="renderCanvas"></canvas>
+    <button class="toggle-ui" id="uiBtn" onclick="toggleUI()">HIDE MESSAGE</button>
+
+    <script>
+        const canvas = document.getElementById('renderCanvas');
+        const ctx = canvas.getContext('2d');
+        let flowers = [];
+        let isHolding = false;
+        let mouse = { x: -1000, y: -1000 };
+        const icons = ['🌹', '🌷', '🪻', '🌺', '🌸', '✨'];
+
+        function resize() {
+            canvas.width = window.innerWidth;
+            canvas.height = window.innerHeight;
+        }
+        window.addEventListener('resize', resize);
+        resize();
+
+        // Interaction Listeners
+        window.addEventListener('mousedown', () => isHolding = true);
+        window.addEventListener('mouseup', () => isHolding = false);
+        window.addEventListener('mousemove', e => { mouse.x = e.clientX; mouse.y = e.clientY; });
+        window.addEventListener('dblclick', e => burst(e.clientX, e.clientY));
+        
+        window.addEventListener('touchstart', e => { isHolding = true; mouse.x = e.touches[0].clientX; mouse.y = e.touches[0].clientY; });
+        window.addEventListener('touchend', () => isHolding = false);
+
+        class Flower {
+            constructor(x, y, isBurst = false) {
+                this.x = x || Math.random() * canvas.width;
+                this.y = y || (Math.random() * -canvas.height);
+                this.char = icons[Math.floor(Math.random() * icons.length)];
+                this.size = Math.random() * 25 + 15;
+                this.vx = isBurst ? (Math.random() - 0.5) * 20 : (Math.random() - 0.5) * 2;
+                this.vy = isBurst ? (Math.random() - 0.5) * 20 : Math.random() * 2 + 1;
+                this.angle = Math.random() * Math.PI * 2;
+                this.spin = (Math.random() - 0.5) * 0.1;
+            }
+
+            update() {
+                if (isHolding) {
+                    let dx = mouse.x - this.x;
+                    let dy = mouse.y - this.y;
+                    let dist = Math.sqrt(dx*dx + dy*dy);
+                    if(dist < 500) {
+                        this.vx += (dx / dist) * 0.5;
+                        this.vy += (dy / dist) * 0.5;
+                    }
+                }
+
+                this.x += this.vx;
+                this.y += this.vy;
+                this.vx *= 0.96;
+                this.vy *= 0.96;
+                this.vy += 0.08; // Gravity
+                this.angle += this.spin;
+
+                if (this.y > canvas.height + 50) {
+                    this.y = -50;
+                    this.x = Math.random() * canvas.width;
+                    this.vy = Math.random() * 2 + 1;
+                }
+            }
+
+            draw() {
+                ctx.save();
+                ctx.translate(this.x, this.y);
+                ctx.rotate(this.angle);
+                ctx.font = `${this.size}px Arial`;
+                ctx.shadowBlur = 10;
+                ctx.shadowColor = 'rgba(255, 0, 85, 0.5)';
+                ctx.fillText(this.char, 0, 0);
+                ctx.restore();
+            }
+        }
+
+        function burst(x, y) {
+            for(let i=0; i<15; i++) {
+                flowers.push(new Flower(x, y, true));
+                if(flowers.length > 300) flowers.shift();
+            }
+        }
+
+        function initGarden() {
+            document.getElementById('startBtn').classList.add('hidden');
+            document.getElementById('mainCard').classList.add('active');
+            document.getElementById('uiBtn').style.display = 'block';
+            for (let i = 0; i < 120; i++) flowers.push(new Flower());
+            render();
+        }
+
+        function toggleUI() {
+            const card = document.getElementById('mainCard');
+            const btn = document.getElementById('uiBtn');
+            card.classList.toggle('minimized');
+            btn.innerText = card.classList.contains('minimized') ? 'SHOW MESSAGE' : 'HIDE MESSAGE';
+        }
+
+        function render() {
+            ctx.fillStyle = 'rgba(5, 5, 5, 0.2)'; // Motion blur trail
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+            flowers.forEach(f => { f.update(); f.draw(); });
+            requestAnimationFrame(render);
+        }
+    </script>
+</body>
+</html>
